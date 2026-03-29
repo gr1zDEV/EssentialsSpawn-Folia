@@ -1,0 +1,45 @@
+name: Build JAR
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Build plugin JAR
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -x "./gradlew" ]]; then
+            echo "Using Gradle wrapper"
+            ./gradlew --no-daemon clean build
+          elif [[ -f "pom.xml" ]]; then
+            echo "Using Maven"
+            mvn -B clean package
+          else
+            echo "No gradle wrapper or pom.xml found. Add one of them so CI can build a plugin JAR."
+            exit 1
+          fi
+
+      - name: Upload built JAR(s)
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-jars
+          path: |
+            build/libs/*.jar
+            target/*.jar
+          if-no-files-found: error
